@@ -34,9 +34,12 @@ public class CloudSimRDA {
         int[] vmAssignments = rda.run(); 
                     
         // Assign cloudlets to VMs based on RDA results
+        System.out.print("Best Solution: [");
         for (int i = 0; i < numCloudlets; i++) {
             cloudletList.get(i).setVmId(vmAssignments[i]);
+            System.out.print(vmAssignments[i] + ", ");
         }
+        System.out.println("]");
 
         broker.submitVmList(vmList);
         broker.submitCloudletList(cloudletList);

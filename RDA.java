@@ -25,7 +25,7 @@ public class RDA {
     private int numHinds = populationSize - numMales;          	// Number of hinds (calculated as populationSize - numMales)
     private int numStags;           // Number of stags (calculated as numMales - numCommanders)
     private int numCommanders;
-    private int numIterations = 100; 
+    private int numIterations = 10; 
     private int numVMs;           
     private int numCloudlets;
     private int uniID = 0;
@@ -38,9 +38,9 @@ public class RDA {
     private List<Deer> fitnessPool = new ArrayList<>();
 
     // Algorithm parameters
-    private double alpha = 0.9;     // % of hinds a commander mates with in his harem
-    private double beta = 0.4;      // % of hinds a commander mates with in another harem
-    private double gamma = 0.7;     // Fraction of males selected as commanders
+    private double alpha = 0.5;     // % of hinds a commander mates with in his harem
+    private double beta = 0.2;      // % of hinds a commander mates with in another harem
+    private double gamma = 0.4;     // Fraction of males selected as commanders
     private double UB;       		// Upper bound of the search space
     private double LB = 0.0;        // Lower bound of the search space
 
@@ -87,108 +87,92 @@ public class RDA {
     }
     
  // Step 2: Fitness function (example: load balancing)
-//    private double evaluateFitness(double[] position) {
-//        // Example function - load balancing
-//        int[] workload = new int[numVMs];
-//        double totalExecutionTime = 0;
-//
-//        // VM's processing power (MIPS)
-//        int[] vmMips = {1000, 2500, 1000, 2000, 2300};
-//
-//        // Calculate workload and execution time
-//        for (int i = 0; i < position.length; i++) {
-//            int vm = Math.floorMod((int) position[i], numVMs); // Ensure VM index is within bounds
-//            workload[vm]++;
-//            totalExecutionTime += (500.0 / vmMips[vm]);
-//        }
-//
-//        // Variance and load balancing factor
-//        double mean = Arrays.stream(workload).average().orElse(0);
-//        double variance = 0;
-//        for (int load : workload) {
-//            variance += Math.pow(load - mean, 2);
-//        }
-//        double loadBalanceFactor = Math.sqrt(variance / numVMs);
-//
-//        // Objective function: Minimize execution time and load imbalance
-//        return totalExecutionTime + loadBalanceFactor;
-//    }
+    private double evaluateFitness(double[] position) {
+        // Example function - load balancing
+        int[] workload = new int[numVMs];
+        double totalExecutionTime = 0;
+
+        // VM's processing power (MIPS)
+        int[] vmMips = {1000, 2500, 1000, 2000, 2300};
+
+        // Calculate workload and execution time
+        for (int i = 0; i < position.length; i++) {
+            int vm = Math.floorMod((int) position[i], numVMs); // Ensure VM index is within bounds
+            workload[vm]++;
+            totalExecutionTime += (500.0 / vmMips[vm]);
+        }
+
+        // Variance and load balancing factor
+        double mean = Arrays.stream(workload).average().orElse(0);
+        double variance = 0;
+        for (int load : workload) {
+            variance += Math.pow(load - mean, 2);
+        }
+        double loadBalanceFactor = Math.sqrt(variance / numVMs);
+
+        // Objective function: Minimize execution time and load imbalance
+        return totalExecutionTime + loadBalanceFactor;
+    }
 
     // Step 2: Fitness function (example: load balancing)
     private double evaluateFitness(double[] position) {
+        // 1. Calculate VM workloads and performance metrics
         int[] workload = new int[numVMs];
-        double[] processingTime = new double[numVMs];
-        double[] utilization = new double[numVMs];
         double totalCost = 0;
         double totalResponseTime = 0;
+        double maxVmTime = 0; // Makespan
 
-        int cloudletLength = 500;
-        int[] vmMips = new int[numVMs];
-        double[] costPerVM = new double[numVMs];
+        // Constants (adjust based on your CloudSim setup)
+        int cloudletLength = 50000; // MI (Million Instructions)
+        int vmMips = 1000;         // MIPS per VM (assumed fixed)
+        double costPerSec = 3.0;    // Cost per second of VM usage
 
-        for (int i = 0; i < numVMs; i++) {
-            vmMips[i] = 1000 + (int)(Math.random() * 500);
-            costPerVM[i] = 2.0 + (Math.random() * 2.0);
-        }
-
-        // Prepare VM task lists for response time calculation
-        List<List<Integer>> vmTaskList = new ArrayList<>();
-        for (int i = 0; i < numVMs; i++) vmTaskList.add(new ArrayList<>());
-
+        // Assign cloudlets to VMs and compute metrics
         for (int i = 0; i < position.length; i++) {
-            int vmId = (int) (position[i] * numVMs) % numVMs;
+            int vmId = (int) (position[i] * numVMs) % numVMs; // Ensure VM ID is valid
             workload[vmId]++;
-            vmTaskList.get(vmId).add(i); // Assign cloudlet index to VM
-        }
 
-        // Estimate response time, execution time, and cost per VM
-        for (int vmId = 0; vmId < numVMs; vmId++) {
-            double currentTime = 0.0;
-            for (int cl : vmTaskList.get(vmId)) {
-                double execTime = (double) cloudletLength / vmMips[vmId];
-                currentTime += execTime;
-                processingTime[vmId] += execTime;
-                totalCost += costPerVM[vmId] * execTime;
-                totalResponseTime += currentTime; // Response time = time when it finishes
+            // Execution time for this cloudlet on the assigned VM
+            double execTime = (double) cloudletLength / vmMips;
+            totalCost += execTime * costPerSec;
+            totalResponseTime += execTime; // Simple model (adjust if needed)
+
+            // Update makespan (max execution time across VMs)
+            double vmTotalTime = workload[vmId] * execTime;
+            if (vmTotalTime > maxVmTime) {
+                maxVmTime = vmTotalTime;
             }
         }
 
-        double makespan = Arrays.stream(processingTime).max().orElse(0);
-        double totalUtilization = 0;
-        for (int j = 0; j < numVMs; j++) {
-            utilization[j] = makespan > 0 ? processingTime[j] / makespan : 0;
-            totalUtilization += utilization[j];
+        // 2. Calculate Utilization (load balancing)
+        double avgLoad = (double) numCloudlets / numVMs;
+        double utilizationVariance = 0;
+        for (int load : workload) {
+            utilizationVariance += Math.pow(load - avgLoad, 2);
         }
+        double utilizationScore = 1.0 / (1.0 + Math.sqrt(utilizationVariance / numVMs)); // Higher = better balance
 
-        double resourceUtilization = totalUtilization / numVMs;
-        double avgResponseTime = totalResponseTime / position.length;
+        // 3. Normalize all metrics to [0, 1] range
+        // (Use realistic min/max bounds for normalization)
+        double normMakespan = normalizeMin(maxVmTime, 0, cloudletLength * numCloudlets / vmMips);
+        double normUtilization = utilizationScore; // Already in [0, 1]
+        double normCost = normalizeMin(totalCost, 0, numCloudlets * (cloudletLength / vmMips) * costPerSec);
+        double normResponseTime = normalizeMin(totalResponseTime, 0, numCloudlets * (cloudletLength / vmMips));
 
-        // Normalization bounds
-        double maxPossibleMakespan = numCloudlets * (cloudletLength / Collections.min(Arrays.asList(Arrays.stream(vmMips).boxed().toArray(Integer[]::new))));
-        double normMakespan = normalizeMin(makespan, 0, maxPossibleMakespan);
-        double normCost = normalizeMin(totalCost, 0, numCloudlets * cloudletLength * Collections.max(Arrays.asList(Arrays.stream(costPerVM).boxed().toArray(Double[]::new))) / 1000);
-        double normResponseTime = normalizeMin(avgResponseTime, 0, maxPossibleMakespan);
-        double normResourceUtilization = normalizeMax(resourceUtilization, 0, 1);
-
-        double[] weights = {0.25, 0.25, 0.25, 0.25}; // makespan, utilization, cost, response time
-        double fitness =
-            weights[0] * normMakespan +
-            weights[1] * normResourceUtilization +
-            weights[2] * normCost +
-            weights[3] * normResponseTime;
+        // 4. Apply weights (adjust based on priority)
+        double[] weights = {0.3, 0.2, 0.3, 0.2}; // Makespan, Utilization, Cost, ResponseTime
+        double fitness = 
+            weights[0] * normMakespan +      // Minimize makespan
+            weights[1] * normUtilization +   // Maximize utilization (higher = better)
+            weights[2] * normCost +          // Minimize cost
+            weights[3] * normResponseTime;   // Minimize response time
 
         return fitness;
     }
 
-
-    // Helper: Normalize a minimization objective (lower actual value = higher normalized value)
+    // Helper: Normalize a minimize objective (lower = better)
     private double normalizeMin(double value, double min, double max) {
         return (max != min) ? (max - value) / (max - min) : 1.0;
-    }
-
-    // Helper: Normalize a maximization objective (higher actual value = higher normalized value)
-    private double normalizeMax(double value, double min, double max) {
-        return (max != min) ? (value - min) / (max - min) : 1.0;
     }
 
     // Step 3: Roaring phase for each male (position update)
@@ -372,29 +356,11 @@ public class RDA {
     }
     
     private void selectNextGen() {
-		fitnessPool.addAll(hinds);
+    	fitnessPool.addAll(hinds);
     	fitnessPool.sort(Comparator.comparingDouble(ind -> ind.fitness));
         hinds = new ArrayList<>(fitnessPool.subList(0, numHinds));
         fitnessPool.clear();
     }
-    
-    private void tournamentSelection() {
-        Random rand = new Random();
-        fitnessPool.addAll(hinds);
-        hinds.clear();
-        
-        for (int i = 0; i < numHinds; i++) {
-            List<Deer> tournament = new ArrayList<>();
-            for (int j = 0; j < 5; j++) {
-                Deer randomHind = fitnessPool.get(rand.nextInt(fitnessPool.size()));
-                tournament.add(randomHind);
-            }
-
-            tournament.sort(Comparator.comparingDouble(d -> d.fitness));
-            hinds.add(tournament.get(0)); // Select best from tournament
-        }
-    }
-
 
     // Step 7: Update best solution
     private void updateBestSolution(List<Deer> allIndividuals) {
@@ -424,8 +390,7 @@ public class RDA {
             fightingPhase();
             int[][] harems = formHarems();
             matingPhase(harems);
-//            selectNextGen();
-            tournamentSelection();
+            selectNextGen();
 
             List<Deer> allIndividuals = new ArrayList<>();
             allIndividuals.addAll(males);

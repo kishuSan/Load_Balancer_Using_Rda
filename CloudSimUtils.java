@@ -56,7 +56,7 @@ public class CloudSimUtils {
         }
         // Creating and returning a host with best effort poilices for all provisioners
         return new Host(id, new RamProvisionerSimple(ram), new BwProvisionerSimple(bw),
-                storage, peList, new VmSchedulerTimeShared(peList));
+                storage, peList, new VmSchedulerSpaceShared(peList));
     }
     
     // create broker
