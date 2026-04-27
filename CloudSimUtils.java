@@ -74,7 +74,8 @@ public class CloudSimUtils {
     public static List<Vm> createVMs(int brokerId, int numVMs) {
     	// kept all vms with similar config
         List<Vm> list = new ArrayList<>();
-		int mips = 1000;
+//		int mips = 1000;
+		int[] vmMips = {1000, 2500, 1000, 2000, 2300};
 		long size = 10000; // image size (MB)
 		int ram = 20480; // vm memory (MB)
 		long bw = 10000;
@@ -82,7 +83,7 @@ public class CloudSimUtils {
 		String vmm = "Xen"; // VMM name
 		
         for (int i = 0; i < numVMs; i++) {
-            list.add(new Vm(i, brokerId, mips, pesNumber, ram, bw, 
+            list.add(new Vm(i, brokerId, vmMips[i], pesNumber, ram, bw, 
             		size, vmm, new CloudletSchedulerTimeShared()));
         }
         
@@ -103,7 +104,6 @@ public class CloudSimUtils {
         
         return list;
     }
-    
     
     // Calculating results 
     public static void printCloudletResults(List<Cloudlet> cloudletList) {

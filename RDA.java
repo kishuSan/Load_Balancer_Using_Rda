@@ -22,8 +22,8 @@ class Deer {
 public class RDA {
     private int populationSize = 100;
     private int numMales = 15;     
-    private int numHinds = populationSize - numMales;          	// Number of hinds (calculated as populationSize - numMales)
-    private int numStags;           // Number of stags (calculated as numMales - numCommanders)
+    private int numHinds = populationSize - numMales;     // Number of hinds (calculated as populationSize - numMales)
+    private int numStags;      // Number of stags (calculated as numMales - numCommanders)
     private int numCommanders;
     private int numIterations = 10; 
     private int numVMs;           
@@ -115,65 +115,65 @@ public class RDA {
     }
 
     // Step 2: Fitness function (example: load balancing)
-    private double evaluateFitness(double[] position) {
-        // 1. Calculate VM workloads and performance metrics
-        int[] workload = new int[numVMs];
-        double totalCost = 0;
-        double totalResponseTime = 0;
-        double maxVmTime = 0; // Makespan
-
-        // Constants (adjust based on your CloudSim setup)
-        int cloudletLength = 50000; // MI (Million Instructions)
-        int vmMips = 1000;         // MIPS per VM (assumed fixed)
-        double costPerSec = 3.0;    // Cost per second of VM usage
-
-        // Assign cloudlets to VMs and compute metrics
-        for (int i = 0; i < position.length; i++) {
-            int vmId = (int) (position[i] * numVMs) % numVMs; // Ensure VM ID is valid
-            workload[vmId]++;
-
-            // Execution time for this cloudlet on the assigned VM
-            double execTime = (double) cloudletLength / vmMips;
-            totalCost += execTime * costPerSec;
-            totalResponseTime += execTime; // Simple model (adjust if needed)
-
-            // Update makespan (max execution time across VMs)
-            double vmTotalTime = workload[vmId] * execTime;
-            if (vmTotalTime > maxVmTime) {
-                maxVmTime = vmTotalTime;
-            }
-        }
-
-        // 2. Calculate Utilization (load balancing)
-        double avgLoad = (double) numCloudlets / numVMs;
-        double utilizationVariance = 0;
-        for (int load : workload) {
-            utilizationVariance += Math.pow(load - avgLoad, 2);
-        }
-        double utilizationScore = 1.0 / (1.0 + Math.sqrt(utilizationVariance / numVMs)); // Higher = better balance
-
-        // 3. Normalize all metrics to [0, 1] range
-        // (Use realistic min/max bounds for normalization)
-        double normMakespan = normalizeMin(maxVmTime, 0, cloudletLength * numCloudlets / vmMips);
-        double normUtilization = utilizationScore; // Already in [0, 1]
-        double normCost = normalizeMin(totalCost, 0, numCloudlets * (cloudletLength / vmMips) * costPerSec);
-        double normResponseTime = normalizeMin(totalResponseTime, 0, numCloudlets * (cloudletLength / vmMips));
-
-        // 4. Apply weights (adjust based on priority)
-        double[] weights = {0.3, 0.2, 0.3, 0.2}; // Makespan, Utilization, Cost, ResponseTime
-        double fitness = 
-            weights[0] * normMakespan +      // Minimize makespan
-            weights[1] * normUtilization +   // Maximize utilization (higher = better)
-            weights[2] * normCost +          // Minimize cost
-            weights[3] * normResponseTime;   // Minimize response time
-
-        return fitness;
-    }
+//    private double evaluateFitness(double[] position) {
+//        // 1. Calculate VM workloads and performance metrics
+//        int[] workload = new int[numVMs];
+//        double totalCost = 0;
+//        double totalResponseTime = 0;
+//        double maxVmTime = 0; // Makespan
+//
+//        // Constants (adjust based on your CloudSim setup)
+//        int cloudletLength = 50000; // MI (Million Instructions)
+//        int vmMips = 1000;         // MIPS per VM (assumed fixed)
+//        double costPerSec = 3.0;    // Cost per second of VM usage
+//
+//        // Assign cloudlets to VMs and compute metrics
+//        for (int i = 0; i < position.length; i++) {
+//            int vmId = (int) (position[i] * numVMs) % numVMs; // Ensure VM ID is valid
+//            workload[vmId]++;
+//
+//            // Execution time for this cloudlet on the assigned VM
+//            double execTime = (double) cloudletLength / vmMips;
+//            totalCost += execTime * costPerSec;
+//            totalResponseTime += execTime; // Simple model (adjust if needed)
+//
+//            // Update makespan (max execution time across VMs)
+//            double vmTotalTime = workload[vmId] * execTime;
+//            if (vmTotalTime > maxVmTime) {
+//                maxVmTime = vmTotalTime;
+//            }
+//        }
+//
+//        // 2. Calculate Utilization (load balancing)
+//        double avgLoad = (double) numCloudlets / numVMs;
+//        double utilizationVariance = 0;
+//        for (int load : workload) {
+//            utilizationVariance += Math.pow(load - avgLoad, 2);
+//        }
+//        double utilizationScore = 1.0 / (1.0 + Math.sqrt(utilizationVariance / numVMs)); // Higher = better balance
+//
+//        // 3. Normalize all metrics to [0, 1] range
+//        // (Use realistic min/max bounds for normalization)
+//        double normMakespan = normalizeMin(maxVmTime, 0, cloudletLength * numCloudlets / vmMips);
+//        double normUtilization = utilizationScore; // Already in [0, 1]
+//        double normCost = normalizeMin(totalCost, 0, numCloudlets * (cloudletLength / vmMips) * costPerSec);
+//        double normResponseTime = normalizeMin(totalResponseTime, 0, numCloudlets * (cloudletLength / vmMips));
+//
+//        // 4. Apply weights (adjust based on priority)
+//        double[] weights = {0.3, 0.2, 0.3, 0.2}; // Makespan, Utilization, Cost, ResponseTime
+//        double fitness = 
+//            weights[0] * normMakespan +      // Minimize makespan
+//            weights[1] * normUtilization +   // Maximize utilization (higher = better)
+//            weights[2] * normCost +          // Minimize cost
+//            weights[3] * normResponseTime;   // Minimize response time
+//
+//        return fitness;
+//    }
 
     // Helper: Normalize a minimize objective (lower = better)
-    private double normalizeMin(double value, double min, double max) {
-        return (max != min) ? (max - value) / (max - min) : 1.0;
-    }
+//    private double normalizeMin(double value, double min, double max) {
+//        return (max != min) ? (max - value) / (max - min) : 1.0;
+//    }
 
     // Step 3: Roaring phase for each male (position update)
     private void roaringPhase() {
